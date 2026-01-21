@@ -18,8 +18,8 @@ local dlstatus = require('moonloader').download_status
 local update_state = false -- Если переменная == true, значит начнётся обновление.
 local update_found = false -- Если будет true, будет доступна команда /update.
 
-local script_vers = 1.0
-local script_vers_text = "v1.0" -- 
+local script_vers = 1.1
+local script_vers_text = "public" -- 
 
 local update_url = 'https://raw.githubusercontent.com/incurrents/coldblooded/main/version.ini'           -- Путь к ini файлу. Позже нам понадобиться.
 local update_path = getWorkingDirectory() .. "/version.ini"
@@ -27,10 +27,12 @@ local update_path = getWorkingDirectory() .. "/version.ini"
 local script_url = 'https://raw.githubusercontent.com/incurrents/coldblooded/main/cult.lua' -- Путь скрипту.
 local script_path = thisScript().path
 
+local updateIni
+
 function check_update() -- Создаём функцию которая будет проверять наличие обновлений при запуске скрипта.
     downloadUrlToFile(update_url, update_path, function(id, status)
         if status == dlstatus.STATUS_ENDDOWNLOADDATA then
-            local updateIni = inicfg.load(nil, update_path)
+            updateIni = inicfg.load(nil, update_path)
             if tonumber(updateIni.info.vers) ~= script_vers then -- Сверяем версию в скрипте и в ini файле на github
                 msg("Имеется новая версия скрипта. Версия: "..updateIni.info.vers_text..".") -- Сообщаем о новой версии.
                 downloadversion()
@@ -514,7 +516,7 @@ function main()
         flsa = not flsa
         msg(flsa and 'FLSA Включен!' or 'FLSA Выключен!')
     end)
-    checkScriptUpdate()
+    check_update()
     while true do
         wait(0)
         local now = os.clock() * 1000
@@ -1023,7 +1025,7 @@ local function drawBindTab()
     imgui.SameLine(0, 4)
     imgui.TextDisabled('?')
     imgui.Hint('hintwarelock', u8 'Чтобы забиндить две кнопки сразу надо их сперва зажать и потом нажать на выбор кнопки')
-    imgui.TextDisabled('#cult')
+    imgui.TextDisabled('ver '..updateIni.info.vers_text)
 end
 
 
@@ -1079,7 +1081,7 @@ local function drawAmmoTab()
         settings.config.rifleAzacount = rifle_azacount[0]
         inicfg.save(settings, config_name)
     end
-    imgui.TextDisabled('#cult')
+    imgui.TextDisabled('ver '..updateIni.info.vers_text)
 end
 
 local function drawFriendListTab()
