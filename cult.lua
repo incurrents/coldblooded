@@ -17,8 +17,8 @@ local dlstatus = require('moonloader').download_status
 local update_state = false -- Если переменная == true, значит начнётся обновление.
 local update_found = false -- Если будет true, будет доступна команда /update.
 
-local script_vers = 1.0
-local script_vers_text = "1.0"                                                                 --
+local script_vers = 1.1
+local script_vers_text = "RELEASE"                                                                 --
 
 local update_url =
 'https://raw.githubusercontent.com/incurrents/coldblooded/main/version.ini'                    -- Путь к ini файлу. Позже нам понадобиться.
