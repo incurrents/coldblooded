@@ -1,5 +1,5 @@
-local SCRIPT_VERSION     = '1.0.0'
-
+local SCRIPT_VERSION = '1.0.1'
+local effil = require 'effil'
 local UPDATE_VERSION_URL = 'https://raw.githubusercontent.com/incurrents/coldblooded/refs/heads/main/version.txt'
 local UPDATE_SCRIPT_URL  = 'https://github.com/incurrents/coldblooded/raw/refs/heads/main/cult.lua'
 
@@ -10,7 +10,7 @@ function downloadNewVersion(ver)
         nil,
         function(resp)
             if resp.status_code ~= 200 or not resp.text then
-                sampAddChatMessage('{FF0000}[UPDATE] Ошибка загрузки обновления', -1)
+                msg('Ошибка загрузки обновления')
                 return
             end
 
@@ -18,18 +18,18 @@ function downloadNewVersion(ver)
 
             local f = io.open(path, 'w')
             if not f then
-                sampAddChatMessage('{FF0000}[UPDATE] Не удалось открыть файл для записи', -1)
+                msg('Не удалось открыть файл для записи')
                 return
             end
 
             f:write(resp.text)
             f:close()
 
-            sampAddChatMessage('{00FF00}[UPDATE] Скрипт обновлён (' .. ver .. '). Перезапустите игру!', -1)
+            msg('Скрипт обновлён (' .. ver .. ')')
             thisScript():reload()
         end,
         function(err)
-            sampAddChatMessage('{FF0000}[UPDATE] Ошибка загрузки: ' .. tostring(err), -1)
+            msg('Ошибка загрузки: ' .. tostring(err))
         end
     )
 end
@@ -43,7 +43,7 @@ function checkScriptUpdate()
         nil,
         function(resp)
             if resp.status_code ~= 200 or not resp.text then
-                sampAddChatMessage('{FF0000}[UPDATE] Не удалось проверить версию', -1)
+                msg('Не удалось проверить версию')
                 return
             end
 
@@ -51,15 +51,14 @@ function checkScriptUpdate()
             if not remote_version then return end
 
             if remote_version ~= SCRIPT_VERSION then
-                sampAddChatMessage(
-                    string.format('{00FF00}[UPDATE] Найдена новая версия: %s', remote_version),
-                    -1
-                )
+                msg(string.format('Найдена новая версия: %s', remote_version))
                 downloadNewVersion(remote_version)
+            elseif remote_version == SCRIPT_VERSION  then
+                msg('Версия '..SCRIPT_VERSION..' актуальная')
             end
         end,
         function(err)
-            sampAddChatMessage('{FF0000}[UPDATE] Ошибка запроса версии: ' .. tostring(err), -1)
+            msg('Ошибка запроса версии: ' .. tostring(err))
         end
     )
 end
@@ -538,6 +537,7 @@ function main()
         flsa = not flsa
         msg(flsa and 'FLSA Включен!' or 'FLSA Выключен!')
     end)
+    checkScriptUpdate()
     while true do
         wait(0)
         local now = os.clock() * 1000
@@ -1046,7 +1046,7 @@ local function drawBindTab()
     imgui.SameLine(0, 4)
     imgui.TextDisabled('?')
     imgui.Hint('hintwarelock', u8 'Чтобы забиндить две кнопки сразу надо их сперва зажать и потом нажать на выбор кнопки')
-    imgui.TextDisabled('#cult')
+    imgui.TextDisabled('ver '..SCRIPT_VERSION)
 end
 
 
@@ -1102,7 +1102,7 @@ local function drawAmmoTab()
         settings.config.rifleAzacount = rifle_azacount[0]
         inicfg.save(settings, config_name)
     end
-    imgui.TextDisabled('#cult')
+    imgui.TextDisabled('ver '..SCRIPT_VERSION)
 end
 
 local function drawFriendListTab()
@@ -1567,6 +1567,47 @@ function emul_rpc(name, args)
 
     raknetEmulRpcReceiveBitStream(spec[#spec], bs)
     raknetDeleteBitStream(bs)
+end
+
+
+
+function asyncHttpRequest(method, url, args, resolve, reject)
+   local request_thread = effil.thread(function (method, url, args)
+      local requests = require 'requests'
+      local result, response = pcall(requests.request, method, url, args)
+      if result then
+         response.json, response.xml = nil, nil
+         return true, response
+      else
+         return false, response
+      end
+   end)(method, url, args)
+   -- Если запрос без функций обработки ответа и ошибок.
+   if not resolve then resolve = function() end end
+   if not reject then reject = function() end end
+   -- Проверка выполнения потока
+   lua_thread.create(function()
+      local runner = request_thread
+      while true do
+         local status, err = runner:status()
+         if not err then
+            if status == 'completed' then
+               local result, response = runner:get()
+               if result then
+                  resolve(response)
+               else
+                  reject(response)
+               end
+               return
+            elseif status == 'canceled' then
+               return reject(status)
+            end
+         else
+            return reject(err)
+         end
+         wait(0)
+      end
+   end)
 end
 
 function msg(v) return sampAddChatMessage('{3E8FBF}[COLDBLOODED CULT]:{FFFFFF} ' .. v, -1) end
